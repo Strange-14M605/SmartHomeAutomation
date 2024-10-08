@@ -19,9 +19,9 @@ function Navbar() {
           </button>
           <div className="collapse navbar-collapse" id="navbarNavDropdown">
             <ul className="navbar-nav">
-              <Navbar_button text="Home" url="http://localhost:5000/maintenance"/>
+              <Navbar_button text="Home"/>
               <Navbar_button text="Automation" />
-              <Navbar_button text="Maintenance" />
+              <Navbar_button text="Maintenance"  url="http://localhost:5000/maintenance" />
               <Navbar_button text="Logs" />
 
               <li className="nav-item dropdown">
