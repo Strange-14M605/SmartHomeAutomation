@@ -12,13 +12,33 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 //Routes
-//login - authentication
+//login - authentication *********
+app.post("/login", async (req, res) => {
+  try {
+    const { mobile, password } = req.body;
+    const [user] = await pool.query(
+      "SELECT * FROM user WHERE mobile = ? AND password = ?",
+      [mobile, password]
+    );
+
+    if (user.length > 0) {
+      res.json({ message: "Login successful", user: user[0] });
+    } else {
+      res.status(401).json({ error: "Invalid credentials" });
+    }
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 //sign up - insert new user
 app.post("/user", async(req,res)=>{
   try {
     const {user_ID, name, mobile, password, role, dob} = req.body;
-    await pool.query("INSERT INTO user VALUES (?,?,?,?,?,?)", [user_ID, name, mobile, password, role, dob]);
+    await pool.query(
+      "INSERT INTO user VALUES (?,?,?,?,?,?)", 
+      [user_ID, name, mobile, password, role, dob]);
     res.json(req.body);
   } catch (error) {
     console.error(error.message)
@@ -26,7 +46,19 @@ app.post("/user", async(req,res)=>{
   }
 })
 
-//delete user
+//delete user **************
+app.delete("/user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteUser = await pool.query("DELETE FROM user WHERE user_ID = ?", [
+      id,
+    ]);
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 //display all devices
 app.get("/home", async (req, res) => {
@@ -39,13 +71,38 @@ app.get("/home", async (req, res) => {
   }
 });
 
-//change device status & update log
+//change device status & update log  *************************
+app.put("/device/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Update device status
+    await pool.query("UPDATE device SET status=? WHERE device_ID = ?", [
+      status,
+      id,
+    ]);
+
+    // Insert log for the status update
+    await pool.query(
+      "INSERT INTO logs (device_ID, status, log_date) VALUES (?,?,NOW())",
+      [id, status]
+    );
+
+    res.json({ message: "Device status updated and log recorded" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 //insert new device - admin only
 app.post("/home", async(req,res)=>{
   try {
     const {device_ID, status, name, model, version} = req.body;
-    await pool.query("INSERT INTO device VALUES (?,?,?,?,?)", [device_ID, status, name, model, version]);
+    await pool.query(
+      "INSERT INTO device VALUES (?,?,?,?,?)", 
+      [device_ID, status, name, model, version]);
     res.json(req.body);
   } catch (error) {
     console.error(error.message)
@@ -54,8 +111,32 @@ app.post("/home", async(req,res)=>{
 })
 
 //update device - admin only
+app.put("/home/:id", async(req,res)=>{
+  try {
+    const {id} = req.params;
+    const {status, name, model, version} = req.body;
+    const updateDevice = await pool.query(
+      "UPDATE device SET status=?, name=?, model=?, version=? WHERE device_ID = ?",
+      [status, name, model, version, id]
+    )
+    res.json(updateDevice.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+})
 
 //delete device - admin only
+app.delete("/home/:id", async(req,res)=>{
+  try {
+    const {id} = req.params;
+    const deleteDevice = await pool.query("DELETE FROM device WHERE device_ID=?", [id]);
+    res.json(deleteDevice.rows);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+})
 
 //display all logs - admin only
 app.get("/logs", async (req, res) => {
@@ -79,7 +160,18 @@ app.get("/maintenance", async (req, res) => {
     }
   });
   
-//maintenance notification - admin only
+//maintenance notification - admin only **********************
+app.get("/maintenance/notifications", async (req, res) => {
+  try {
+    const [maintenanceNotifications] = await pool.query(
+      "SELECT * FROM maintenance WHERE next_maintenance_date <= CURDATE()"
+    );
+    res.json(maintenanceNotifications);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 //insert maintenance - admin only
 app.post("/maintenance", async(req,res)=>{
@@ -116,9 +208,36 @@ app.post("/automation", async(req,res)=>{
   }
 })
 
-//update automation - admin only
+//update automation - admin only ****************************
+app.put("/automation/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { start_time, end_time } = req.body;
+    const updateAutomation = await pool.query(
+      "UPDATE automation SET start_time=?, end_time=? WHERE automation_ID = ?",
+      [start_time, end_time, id]
+    );
+    res.json({ message: "Automation updated successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
-//delete automation - admin only
+//delete automation - admin only *******************
+app.delete("/automation/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteAutomation = await pool.query(
+      "DELETE FROM automation WHERE automation_ID=?",
+      [id]
+    );
+    res.json({ message: "Automation deleted successfully" });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server running on ${port}`);
